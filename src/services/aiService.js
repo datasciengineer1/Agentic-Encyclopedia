@@ -55,14 +55,46 @@ export class AIService {
             throw new Error("API Key is missing. Please configure it in settings.");
         }
 
-        let fullMessage = message;
+        let parts = [{ text: message }];
+
+        // Handle Attachments
         if (fileContext) {
-            fullMessage = `Here is the file content provided by the user for analysis:\n\n---\n${fileContext}\n---\n\nUser Question: ${message}`;
+            if (fileContext.isBinary) {
+                // Remove header from base64 string
+                const base64Data = fileContext.data.split(',')[1];
+                parts.unshift({
+                    inlineData: {
+                        data: base64Data,
+                        mimeType: fileContext.mimeType
+                    }
+                });
+            } else {
+                // Text file
+                const content = fileContext.data || fileContext;
+                const fullMessage = `Here is the file content provided by the user for analysis:\n\n---\n${content}\n---\n\nUser Question: ${message}`;
+                parts = [{ text: fullMessage }];
+            }
         }
+
+        const messages = [
+            {
+                role: "user",
+                parts: [{ text: "System Prompt: " + SYSTEM_PROMPT }],
+            },
+            {
+                role: "model",
+                parts: [{ text: "Understood. I am ready to serve as your knowledgeable encyclopedia assistant." }],
+            },
+            {
+                role: "user",
+                parts: parts
+            }
+        ];
 
         for (let i = 0; i < retries; i++) {
             try {
-                const result = await this.chat.sendMessage(fullMessage);
+                // Send parts array
+                const result = await this.chat.sendMessage(parts);
                 const response = await result.response;
                 const text = response.text();
 

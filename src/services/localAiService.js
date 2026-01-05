@@ -67,9 +67,21 @@ export class LocalAIService {
             await this.initialize();
         }
 
+        // Local Llama 3 is text-only
+        if (fileContext && fileContext.isBinary) {
+            return {
+                text: "I cannot see images or PDFs when running locally (Llama 3 is text-only). Please switch to **Gemini (Cloud)** in Settings to analyze these files.",
+                sources: ["System Warning"],
+                confidence_score: 100,
+                analysis: { intent: "File Analysis", context: "Unsupported in Local Mode" },
+                recommendations: []
+            };
+        }
+
         let fullMessage = message;
         if (fileContext) {
-            fullMessage = `Here is the file content provided by the user for analysis:\n\n---\n${fileContext}\n---\n\nUser Question: ${message}`;
+            const content = fileContext.data || fileContext;
+            fullMessage = `Here is the file content provided by the user for analysis:\n\n---\n${content}\n---\n\nUser Question: ${message}`;
         }
 
         const messages = [
