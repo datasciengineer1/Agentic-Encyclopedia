@@ -46,7 +46,13 @@ const MessageInput = ({ onSend, onSwitchToVoice, isProcessing }) => {
                         exit={{ opacity: 0, y: 10 }}
                         className="flex items-center gap-2 mb-2 p-2 bg-surface border border-white/10 rounded-lg w-fit"
                     >
-                        <Paperclip size={14} className="text-secondary" />
+                        {file.type.startsWith('image/') ? (
+                            <div className="w-8 h-8 rounded overflow-hidden flex-shrink-0">
+                                <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover" />
+                            </div>
+                        ) : (
+                            <Paperclip size={14} className="text-secondary shrink-0" />
+                        )}
                         <span className="text-xs text-white/80 max-w-[200px] truncate">{file.name}</span>
                         <button onClick={removeFile} className="p-1 hover:bg-white/10 rounded-full">
                             <X size={12} className="text-white/60" />
@@ -69,14 +75,14 @@ const MessageInput = ({ onSend, onSwitchToVoice, isProcessing }) => {
                 <button
                     onClick={() => fileInputRef.current?.click()}
                     className="p-3 text-white/50 hover:text-secondary hover:bg-secondary/10 rounded-xl transition-colors shrink-0"
-                    title="Attach Text File"
+                    title="Attach File (Text, Image, PDF)"
                 >
                     <Paperclip size={20} />
                     <input
                         type="file"
                         ref={fileInputRef}
                         onChange={handleFileChange}
-                        accept=".txt,.csv,.json,.md"
+                        accept=".txt,.csv,.json,.md,.jpg,.jpeg,.png,.webp,.pdf"
                         className="hidden"
                     />
                 </button>

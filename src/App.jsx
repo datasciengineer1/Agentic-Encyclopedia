@@ -44,6 +44,18 @@ function App() {
   const aiServiceRef = useRef(null);
   const localServiceRef = useRef(null);
 
+  useEffect(() => {
+    // Check Mobile status to prevent crashes
+    const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+    const isMobile = Boolean(userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i) || window.innerWidth < 768);
+
+    if (isMobile && provider === 'local') {
+      console.warn("Mobile device detected. Forcing Gemini mode to prevent memory crash.");
+      setProvider('gemini');
+      localStorage.setItem('ai_provider', 'gemini');
+    }
+  }, [provider]);
+
   // Initialize Services
   useEffect(() => {
     // Gemini Service
@@ -51,8 +63,9 @@ function App() {
       aiServiceRef.current = new AIService(apiKey);
     }
 
-    // Local Service (Single instance needed)
-    if (!localServiceRef.current) {
+    // Local Service (Single instance needed, Desktop Only)
+    // We double check provider here just in case
+    if (provider === 'local' && !localServiceRef.current) {
       localServiceRef.current = new LocalAIService((progress) => {
         setModelProgress(progress);
         if (progress.progress === 1 || progress.text.includes("Finish")) {
@@ -60,7 +73,7 @@ function App() {
         }
       });
     }
-  }, [apiKey]);
+  }, [apiKey, provider]);
 
   const handleSaveSettings = (newProvider, newKey) => {
     setProvider(newProvider);
@@ -73,14 +86,23 @@ function App() {
     if (!text || !text.trim()) return;
 
     // Read File
-    let fileContext = null;
+    let fileData = null;
     if (file) {
       try {
-        fileContext = await new Promise((resolve, reject) => {
+        fileData = await new Promise((resolve, reject) => {
           const reader = new FileReader();
-          reader.onload = (e) => resolve(e.target.result);
+          reader.onload = (e) => resolve({
+            data: e.target.result,
+            mimeType: file.type || 'text/plain',
+            isBinary: file.type.startsWith('image/') || file.type === 'application/pdf'
+          });
           reader.onerror = (e) => reject(e);
-          reader.readAsText(file);
+
+          if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+            reader.readAsDataURL(file);
+          } else {
+            reader.readAsText(file);
+          }
         });
       } catch (e) { console.error("File Read Error:", e); }
     }
@@ -105,10 +127,10 @@ function App() {
 
       if (provider === 'local') {
         // Use Local Service
-        responseData = await localServiceRef.current.sendMessage(text, fileContext);
+        responseData = await localServiceRef.current.sendMessage(text, fileData);
       } else {
         // Use Gemini Service
-        responseData = await aiServiceRef.current.sendMessage(text, fileContext, 3, (delay) => {
+        responseData = await aiServiceRef.current.sendMessage(text, fileData, 3, (delay) => {
           console.log(`User notified: Retrying in ${delay}ms`);
         });
       }

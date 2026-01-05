@@ -5,9 +5,19 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentProvider, currentApiKey
     const [apiKey, setApiKey] = useState(currentApiKey || '');
     const [provider, setProvider] = useState(currentProvider || 'gemini');
 
+    const [isMobile, setIsMobile] = useState(false);
+
     useEffect(() => {
         setApiKey(currentApiKey);
         setProvider(currentProvider);
+
+        // Simple mobile detection
+        const checkMobile = () => {
+            const userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent;
+            const mobile = Boolean(userAgent.match(/Android|BlackBerry|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i) || window.innerWidth < 768);
+            setIsMobile(mobile);
+        };
+        checkMobile();
     }, [currentApiKey, currentProvider, isOpen]);
 
     const handleSave = () => {
@@ -35,8 +45,8 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentProvider, currentApiKey
                             <button
                                 onClick={() => setProvider('gemini')}
                                 className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${provider === 'gemini'
-                                        ? 'bg-primary/20 border-primary text-primary'
-                                        : 'bg-background border-white/10 text-white/40 hover:border-white/30'
+                                    ? 'bg-primary/20 border-primary text-primary'
+                                    : 'bg-background border-white/10 text-white/40 hover:border-white/30'
                                     }`}
                             >
                                 <Cloud size={24} className="mb-2" />
@@ -45,21 +55,29 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentProvider, currentApiKey
                             </button>
 
                             <button
-                                onClick={() => setProvider('local')}
+                                onClick={() => !isMobile && setProvider('local')}
+                                disabled={isMobile}
                                 className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${provider === 'local'
-                                        ? 'bg-secondary/20 border-secondary text-secondary'
+                                    ? 'bg-secondary/20 border-secondary text-secondary'
+                                    : isMobile
+                                        ? 'bg-white/5 border-transparent text-white/20 cursor-not-allowed'
                                         : 'bg-background border-white/10 text-white/40 hover:border-white/30'
                                     }`}
                             >
                                 <Cpu size={24} className="mb-2" />
                                 <span className="text-sm font-semibold">Llama 3 (Local)</span>
-                                <span className="text-[10px] opacity-70">Private & Unlimited</span>
+                                <span className="text-[10px] opacity-70">{isMobile ? "Desktop Only" : "Private & Unlimited"}</span>
                             </button>
                         </div>
                         {provider === 'local' && (
                             <div className="mt-2 flex items-start gap-2 p-2 bg-secondary/10 rounded-lg text-xs text-secondary/80">
                                 <Zap size={14} className="shrink-0 mt-0.5" />
                                 <p>Requires ~4GB download on first use. Runs entirely on your device GPU.</p>
+                            </div>
+                        )}
+                        {isMobile && (
+                            <div className="mt-2 text-xs text-white/30 text-center">
+                                Local AI is disabled on mobile due to memory limits.
                             </div>
                         )}
                     </div>
