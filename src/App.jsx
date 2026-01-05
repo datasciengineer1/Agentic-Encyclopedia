@@ -20,7 +20,11 @@ function App() {
   const [inputMode, setInputMode] = useState('voice'); // 'voice' | 'text'
 
   // Settings State
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
+  const [apiKey, setApiKey] = useState(
+    localStorage.getItem('gemini_api_key') ||
+    import.meta.env.VITE_GEMINI_API_KEY ||
+    ''
+  );
   const [provider, setProvider] = useState(localStorage.getItem('ai_provider') || 'gemini');
 
   // Local AI State
