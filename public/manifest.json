@@ -1,0 +1,22 @@
+{
+    "name": "Agentic Encyclopedia",
+    "short_name": "Encyclopedia",
+    "description": "Your walking encyclopedia with voice controls.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#0f172a",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512"
+        },
+        {
+            "src": "/vite.svg",
+            "type": "image/svg+xml",
+            "sizes": "192x192"
+        }
+    ]
+}
