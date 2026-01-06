@@ -65,14 +65,44 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentProvider, currentApiKey
                                     }`}
                             >
                                 <Cpu size={24} className="mb-2" />
-                                <span className="text-sm font-semibold">Llama 3 (Local)</span>
+                                <span className="text-sm font-semibold">Local AI (Free)</span>
                                 <span className="text-[10px] opacity-70">{isMobile ? "Desktop Only" : "Private & Unlimited"}</span>
                             </button>
+
+                            <button
+                                onClick={() => setProvider('groq')}
+                                className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all ${provider === 'groq'
+                                    ? 'bg-orange-500/20 border-orange-500 text-orange-500'
+                                    : 'bg-background border-white/10 text-white/40 hover:border-white/30'
+                                    }`}
+                            >
+                                <Zap size={24} className="mb-2" />
+                                <span className="text-sm font-semibold">Groq (Cloud)</span>
+                                <span className="text-[10px] opacity-70">Super Fast & Free High Limits</span>
+                            </button>
                         </div>
+
                         {provider === 'local' && (
-                            <div className="mt-2 flex items-start gap-2 p-2 bg-secondary/10 rounded-lg text-xs text-secondary/80">
-                                <Zap size={14} className="shrink-0 mt-0.5" />
-                                <p>Requires ~4GB download on first use. Runs entirely on your device GPU.</p>
+                            <div className="mt-4 space-y-3">
+                                <div>
+                                    <label className="block text-xs font-medium text-white/70 mb-1">Local Model Selection</label>
+                                    <select
+                                        value={window.localStorage.getItem('local_model_id') || 'Llama-3-8B-Instruct-q4f32_1-MLC'}
+                                        onChange={(e) => {
+                                            window.localStorage.setItem('local_model_id', e.target.value);
+                                            // Force re-render not strictly needed as Save applies it, but improves UX if we had state
+                                        }}
+                                        className="w-full bg-background border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-secondary"
+                                    >
+                                        <option value="Llama-3-8B-Instruct-q4f32_1-MLC">Llama 3 (Text-Only) - Faster, Smart</option>
+                                        <option value="Phi-3.5-vision-instruct-q4f16_1-MLC">Phi 3.5 Vision (Images) - Multimodal, ~4GB</option>
+                                    </select>
+                                </div>
+
+                                <div className="flex items-start gap-2 p-2 bg-secondary/10 rounded-lg text-xs text-secondary/80">
+                                    <Zap size={14} className="shrink-0 mt-0.5" />
+                                    <p>Selected model requires download on first use. Phi 3.5 Vision enables image support.</p>
+                                </div>
                             </div>
                         )}
                         {isMobile && (
@@ -82,22 +112,22 @@ const SettingsModal = ({ isOpen, onClose, onSave, currentProvider, currentApiKey
                         )}
                     </div>
 
-                    {/* API Key Input (Only needed for Gemini) */}
-                    {provider === 'gemini' && (
+                    {/* API Key Input */}
+                    {(provider === 'gemini' || provider === 'groq') && (
                         <div>
-                            <label className="block text-sm font-medium text-white/70 mb-2">Gemini API Key</label>
+                            <label className="block text-sm font-medium text-white/70 mb-2">{provider === 'gemini' ? "Gemini" : "Groq"} API Key</label>
                             <div className="relative">
                                 <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40" size={16} />
                                 <input
                                     type="password"
                                     value={apiKey}
                                     onChange={(e) => setApiKey(e.target.value)}
-                                    placeholder="Enter your API Key"
+                                    placeholder={`Enter your ${provider === 'gemini' ? "Gemini" : "Groq"} API Key`}
                                     className="w-full pl-10 pr-4 py-3 bg-background border border-white/10 rounded-xl focus:outline-none focus:border-primary text-white placeholder:text-white/20"
                                 />
                             </div>
                             <p className="mt-2 text-xs text-white/40">
-                                Key stored locally in browser. Free tier recommended.
+                                Key stored locally. {provider === 'groq' ? "Get free key at console.groq.com" : "Free tier recommended."}
                             </p>
                         </div>
                     )}

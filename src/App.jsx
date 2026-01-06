@@ -12,6 +12,7 @@ import { useSpeechRecognition } from './hooks/useSpeechRecognition';
 import { useTextToSpeech } from './hooks/useTextToSpeech';
 import { AIService } from './services/aiService';
 import { LocalAIService } from './services/localAiService';
+import { GroqService } from './services/groqService';
 
 function App() {
   const [messages, setMessages] = useState([]);
@@ -19,16 +20,24 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [inputMode, setInputMode] = useState('voice'); // 'voice' | 'text'
 
-  // Settings State
-  const [apiKey, setApiKey] = useState(
-    localStorage.getItem('gemini_api_key') ||
-    import.meta.env.VITE_GEMINI_API_KEY ||
-    ''
-  );
   const [provider, setProvider] = useState(localStorage.getItem('ai_provider') || 'gemini');
+
+  // Load Key based on provider
+  const loadKey = (prov) => {
+    if (prov === 'groq') return localStorage.getItem('groq_api_key') || '';
+    return localStorage.getItem('gemini_api_key') || import.meta.env.VITE_GEMINI_API_KEY || '';
+  };
+
+  const [apiKey, setApiKey] = useState(loadKey(provider));
+
+  // Update key when provider changes (if not handling in Settings handleSave)
+  useEffect(() => {
+    setApiKey(loadKey(provider));
+  }, [provider]);
 
   // Local AI State
   const [modelProgress, setModelProgress] = useState(null);
+  const [localModelId, setLocalModelId] = useState(localStorage.getItem('local_model_id') || 'Llama-3-8B-Instruct-q4f32_1-MLC');
 
   const {
     isListening,
@@ -43,6 +52,7 @@ function App() {
 
   const aiServiceRef = useRef(null);
   const localServiceRef = useRef(null);
+  const groqServiceRef = useRef(null);
 
   useEffect(() => {
     // Check Mobile status to prevent crashes
@@ -59,27 +69,45 @@ function App() {
   // Initialize Services
   useEffect(() => {
     // Gemini Service
-    if (apiKey) {
+    if (provider === 'gemini' && apiKey) {
       aiServiceRef.current = new AIService(apiKey);
     }
 
-    // Local Service (Single instance needed, Desktop Only)
-    // We double check provider here just in case
-    if (provider === 'local' && !localServiceRef.current) {
-      localServiceRef.current = new LocalAIService((progress) => {
-        setModelProgress(progress);
-        if (progress.progress === 1 || progress.text.includes("Finish")) {
-          setTimeout(() => setModelProgress(null), 1000); // Hide after completion
-        }
-      });
+    // Groq Service
+    if (provider === 'groq' && apiKey) {
+      groqServiceRef.current = new GroqService(apiKey);
     }
-  }, [apiKey, provider]);
+
+    // Local Service
+    // Re-initialize if provider is local AND model ID changed OR service doesn't exist
+    if (provider === 'local') {
+      // If service exists but model ID doesn't match, we need to reload
+      const currentServiceId = localServiceRef.current?.selectedModel;
+
+      if (!localServiceRef.current || currentServiceId !== localModelId) {
+        console.log("Initializing Local Service with Model:", localModelId);
+        localServiceRef.current = new LocalAIService(localModelId, (progress) => {
+          setModelProgress(progress);
+          if (progress.progress === 1 || progress.text.includes("Finish")) {
+            setTimeout(() => setModelProgress(null), 1000);
+          }
+        });
+      }
+    }
+  }, [apiKey, provider, localModelId]);
 
   const handleSaveSettings = (newProvider, newKey) => {
+    if (newProvider === 'gemini') {
+      localStorage.setItem('gemini_api_key', newKey);
+    } else if (newProvider === 'groq') {
+      localStorage.setItem('groq_api_key', newKey);
+    } else {
+      localStorage.setItem('local_model_id', window.localStorage.getItem('local_model_id'));
+    }
+
     setProvider(newProvider);
     setApiKey(newKey);
     localStorage.setItem('ai_provider', newProvider);
-    localStorage.setItem('gemini_api_key', newKey);
   };
 
   const handleSendMessage = useCallback(async (text, file = null) => {
@@ -119,6 +147,12 @@ function App() {
       speak(err);
       return;
     }
+    if (provider === 'groq' && !groqServiceRef.current) {
+      const err = "Please set your Groq API Key in the settings.";
+      setMessages(prev => [...prev, { role: 'model', text: { text: err } }]);
+      speak(err);
+      return;
+    }
 
     setIsProcessing(true);
 
@@ -128,6 +162,9 @@ function App() {
       if (provider === 'local') {
         // Use Local Service
         responseData = await localServiceRef.current.sendMessage(text, fileData);
+      } else if (provider === 'groq') {
+        // Use Groq Service
+        responseData = await groqServiceRef.current.sendMessage(text, fileData);
       } else {
         // Use Gemini Service
         responseData = await aiServiceRef.current.sendMessage(text, fileData, 3, (delay) => {
